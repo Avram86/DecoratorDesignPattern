@@ -15,21 +15,30 @@ namespace DecoratorDesignPattern.Controllers
     public class HomeController : Controller
     {
         private readonly ILoggerFactory _loggerFactory;
+        private readonly IMemoryCache _memoryCache;
         private readonly ILogger<HomeController> _logger;
         private readonly IWeatherService _weatherService;
 
         public HomeController(ILoggerFactory loggerFactory, IConfiguration configuration, IMemoryCache memoryCache)
         {
             _loggerFactory = loggerFactory;
+            _memoryCache = memoryCache;
             _logger = _loggerFactory.CreateLogger<HomeController>();
 
             String apiKey = configuration.GetValue<String>("AppSettings:OpenWeatherMapApiKey");
 
             //_weatherService = new WeatherService(apiKey);
 
-            //using DECORATOR
-            _weatherService = new WeatherServiceLoggingDecorator(new WeatherService(apiKey),
-                _loggerFactory.CreateLogger<WeatherServiceLoggingDecorator>());
+            //using ONLY Logger DECORATOR
+            //_weatherService = new WeatherServiceLoggingDecorator(new WeatherService(apiKey),
+            //    _loggerFactory.CreateLogger<WeatherServiceLoggingDecorator>());
+
+            //using CACHE DECORATOR
+            //building the onion from the inside out
+            IWeatherService concreteService = new WeatherService(apiKey);
+            IWeatherService withLoggingDecorator = new WeatherServiceLoggingDecorator(concreteService, _loggerFactory.CreateLogger<WeatherServiceLoggingDecorator>());
+            IWeatherService withCachingDecorator = new WeatherServiceCachingDecorator(withLoggingDecorator, _memoryCache);
+            _weatherService = withCachingDecorator;
         }
 
 
